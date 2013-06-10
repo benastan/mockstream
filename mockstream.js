@@ -8,7 +8,12 @@ var stream = require('stream'),
 function MockDataStream(opts) {
     opts = opts || {};
     this.chunkSize = opts.chunkSize || 1024; // Default 1K chunk size
-    this.streamLength = opts.streamLength || 1048576; // Default 1MB stream length
+    if (typeof opts.streamString === 'string') {
+      this.streamBuffer = new Buffer(opts.streamString);
+      this.streamLength = this.streamBuffer.length;
+    } else {
+      this.streamLength = opts.streamLength || 1048576; // Default 1MB stream length
+    }
     this.written = 0;
     this.paused = false;
 }   
@@ -42,9 +47,14 @@ MockDataStream.prototype._writeData = function() {
     
     var remainder = this.streamLength - this.written,
         dataLength = (remainder > this.chunkSize ? this.chunkSize : remainder),
-        data = new Array(dataLength + 1).join("0"),
-        buf = new Buffer(data);
-        
+        buf, data;
+    if (this.streamBuffer) {
+      buf = this.streamBuffer.slice(this.written, this.written + dataLength);
+    } else {
+      data = new Array(dataLength + 1).join("0"),
+      buf = new Buffer(data);
+    }
+      
     this.emit('data', buf);
     
     this.written += dataLength;        
